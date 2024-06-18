@@ -26,8 +26,9 @@ const (
 )
 
 type policyServerConfigEntry struct {
-	URL      string               `json:"url"`
-	Settings runtime.RawExtension `json:"settings,omitempty"`
+	URL             string               `json:"url"`
+	Settings        runtime.RawExtension `json:"settings,omitempty"`
+	AllowedToMutate bool                 `json:"allowedToMutate"`
 }
 
 // Reconciles the ConfigMap that holds the configuration of the Policy Server
@@ -60,8 +61,9 @@ func (r *Reconciler) createPolicyServerConfigMap(
 ) error {
 	policies := map[string]policyServerConfigEntry{
 		clusterAdmissionPolicy.Name: {
-			URL:      clusterAdmissionPolicy.Spec.Module,
-			Settings: clusterAdmissionPolicy.Spec.Settings,
+			URL:             clusterAdmissionPolicy.Spec.Module,
+			Settings:        clusterAdmissionPolicy.Spec.Settings,
+			AllowedToMutate: clusterAdmissionPolicy.Spec.Mutating,
 		},
 	}
 	policiesJSON, err := json.Marshal(policies)
@@ -142,8 +144,9 @@ func (r *Reconciler) addPolicyToPolicyServerConfigMap(
 	currentPolicy, found := currentPolicies[clusterAdmissionPolicy.Name]
 
 	expectedPolicy := policyServerConfigEntry{
-		URL:      clusterAdmissionPolicy.Spec.Module,
-		Settings: clusterAdmissionPolicy.Spec.Settings,
+		URL:             clusterAdmissionPolicy.Spec.Module,
+		Settings:        clusterAdmissionPolicy.Spec.Settings,
+		AllowedToMutate: clusterAdmissionPolicy.Spec.Mutating,
 	}
 
 	if !found {
