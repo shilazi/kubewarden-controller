@@ -217,6 +217,10 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 				Name:  "KUBEWARDEN_POLICIES",
 				Value: filepath.Join(policiesConfigContainerPath, policiesFilename),
 			},
+			{
+				Name:  "KUBEWARDEN_LOG_LEVEL",
+				Value: "info",
+			},
 		},
 		ReadinessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
