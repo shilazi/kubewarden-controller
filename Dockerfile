@@ -1,5 +1,9 @@
 # Build the manager binary
-FROM golang:1.15 as builder
+FROM golang:1.15 AS builder
+
+ENV CGO_ENABLED=0 \
+    GO111MODULE=on \
+    GOPROXY=https://goproxy.cn,direct
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -16,7 +20,7 @@ COPY controllers/ controllers/
 COPY internal/ internal/
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager main.go
+RUN go build -a -o manager main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
