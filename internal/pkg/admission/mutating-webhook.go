@@ -2,8 +2,11 @@ package admission
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"k8s.io/apimachinery/pkg/types"
 	"path/filepath"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -19,8 +22,20 @@ func (r *Reconciler) reconcileMutatingWebhookConfiguration(
 	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 	admissionSecret *corev1.Secret) error {
 	err := r.Client.Create(ctx, r.mutatingWebhookConfiguration(clusterAdmissionPolicy, admissionSecret))
-	if err == nil || apierrors.IsAlreadyExists(err) {
+	if err == nil {
 		return nil
+	}
+	if apierrors.IsAlreadyExists(err) {
+		mutatingWebhookConfiguration := &admissionregistrationv1.MutatingWebhookConfiguration{}
+		if err = r.Client.Get(ctx, client.ObjectKey{
+			Name: clusterAdmissionPolicy.Name,
+		}, mutatingWebhookConfiguration); err == nil {
+			patch, _ := json.Marshal(r.mutatingWebhookConfiguration(clusterAdmissionPolicy, admissionSecret))
+			err = r.Client.Patch(ctx, mutatingWebhookConfiguration, client.RawPatch(types.StrategicMergePatchType, patch))
+			if err == nil {
+				return nil
+			}
+		}
 	}
 	return fmt.Errorf("cannot reconcile mutating webhook: %w", err)
 }
