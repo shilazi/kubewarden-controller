@@ -231,6 +231,16 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 				},
 			},
 		},
+		LivenessProbe: &corev1.Probe{
+			InitialDelaySeconds: 60,
+			Handler: corev1.Handler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   constants.PolicyServerReadinessProbe,
+					Port:   intstr.FromInt(constants.PolicyServerPort),
+					Scheme: corev1.URISchemeHTTPS,
+				},
+			},
+		},
 	}
 
 	templateAnnotations := map[string]string{
