@@ -230,6 +230,7 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 			},
 		},
 		ReadinessProbe: &corev1.Probe{
+			InitialDelaySeconds: 10,
 			Handler: corev1.Handler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   constants.PolicyServerReadinessProbe,
