@@ -10,6 +10,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apiresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -103,7 +104,7 @@ func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, configMap
 		return fmt.Errorf("cannot retrieve existing policy-server Deployment: %w", err)
 	}
 
-	//nolint
+	// nolint
 	currentConfigVersion, found := deployment.Spec.Template.ObjectMeta.Annotations[constants.PolicyServerDeploymentConfigAnnotation]
 	if !found || currentConfigVersion != configMapVersion {
 		// the current deployment is using an older version of the configuration
@@ -178,8 +179,14 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 		policiesConfigContainerPath = "/config"
 		policiesFilename            = "policies.yml"
 		policiesVolumeName          = "policies"
+		priorityClassName           = "system-node-critical"
 		secretsContainerPath        = "/pki"
 	)
+
+	resourceList := corev1.ResourceList{
+		corev1.ResourceCPU:    apiresource.MustParse("200m"),
+		corev1.ResourceMemory: apiresource.MustParse("786Mi"),
+	}
 
 	admissionContainer := corev1.Container{
 		Name:  constants.PolicyServerDeploymentName,
@@ -241,6 +248,10 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 				},
 			},
 		},
+		Resources: corev1.ResourceRequirements{
+			Limits:   resourceList,
+			Requests: resourceList,
+		},
 	}
 
 	templateAnnotations := map[string]string{
@@ -268,6 +279,7 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 				},
 				Spec: corev1.PodSpec{
 					Containers:         []corev1.Container{admissionContainer},
+					PriorityClassName:  priorityClassName,
 					ServiceAccountName: r.DeploymentsServiceAccountName,
 					Volumes: []corev1.Volume{
 						{
