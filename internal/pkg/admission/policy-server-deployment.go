@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
@@ -176,6 +177,9 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 
 	const (
 		certsVolumeName             = "certs"
+		controlPlaneNodeLabelKey    = "node-role.kubernetes.io/control-plane"
+		masterNodeLabelKey          = "node-role.kubernetes.io/master"
+		hostnameLabelKey            = "kubernetes.io/hostname"
 		policiesConfigContainerPath = "/config"
 		policiesFilename            = "policies.yml"
 		policiesVolumeName          = "policies"
@@ -229,6 +233,17 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 				Value: "info",
 			},
 		},
+		Lifecycle: &corev1.Lifecycle {
+			PreStop: &corev1.Handler{
+				Exec: &corev1.ExecAction {
+					Command: []string{
+						"/bin/sh",
+						"-c",
+						"sleep 5s && kill 1",
+					},
+				},
+			},
+		},
 		ReadinessProbe: &corev1.Probe{
 			InitialDelaySeconds: 10,
 			Handler: corev1.Handler{
@@ -267,6 +282,7 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &settings.Replicas,
+			RevisionHistoryLimit: pointer.Int32Ptr(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: constants.PolicyServerLabels,
 			},
@@ -279,9 +295,71 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 					Annotations: templateAnnotations,
 				},
 				Spec: corev1.PodSpec{
+					Affinity: &corev1.Affinity{
+						NodeAffinity: &corev1.NodeAffinity{
+							PreferredDuringSchedulingIgnoredDuringExecution: []corev1.PreferredSchedulingTerm{
+								{
+									Weight: 100,
+									Preference: corev1.NodeSelectorTerm {
+										MatchExpressions: []corev1.NodeSelectorRequirement{
+											{
+												Key: controlPlaneNodeLabelKey,
+												Operator: corev1.NodeSelectorOpExists,
+											},
+										},
+									},
+								},
+								{
+									Weight: 100,
+									Preference: corev1.NodeSelectorTerm {
+										MatchExpressions: []corev1.NodeSelectorRequirement{
+											{
+												Key: masterNodeLabelKey,
+												Operator: corev1.NodeSelectorOpExists,
+											},
+										},
+									},
+								},
+							},
+						},
+						PodAntiAffinity: &corev1.PodAntiAffinity{
+							PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+								{
+									Weight: 100,
+									PodAffinityTerm: corev1.PodAffinityTerm {
+										LabelSelector: &metav1.LabelSelector{
+											MatchExpressions: []metav1.LabelSelectorRequirement{
+												{
+													Key: constants.PolicyServerLabelKey,
+													Operator: metav1.LabelSelectorOpIn,
+													Values: []string{
+														constants.PolicyServerLabelVal,
+													},
+												},
+											},
+										},
+										TopologyKey: hostnameLabelKey,
+									},
+								},
+							},
+						},
+					},
+					EnableServiceLinks: pointer.BoolPtr(false),
 					Containers:         []corev1.Container{admissionContainer},
 					PriorityClassName:  priorityClassName,
 					ServiceAccountName: r.DeploymentsServiceAccountName,
+					Tolerations: []corev1.Toleration{
+						{
+							Key:      controlPlaneNodeLabelKey,
+							Operator: corev1.TolerationOpEqual,
+							Effect:   corev1.TaintEffectNoSchedule,
+						},
+						{
+							Key:      masterNodeLabelKey,
+							Operator: corev1.TolerationOpEqual,
+							Effect:   corev1.TaintEffectNoSchedule,
+						},
+					},
 					Volumes: []corev1.Volume{
 						{
 							Name: certsVolumeName,

@@ -28,4 +28,6 @@ const (
 
 var (
 	PolicyServerLabels = map[string]string{"app": "kubewarden-policy-server"}
+	PolicyServerLabelKey = "app"
+	PolicyServerLabelVal = "kubewarden-policy-server"
 )
