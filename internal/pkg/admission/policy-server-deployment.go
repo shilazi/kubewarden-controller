@@ -232,9 +232,9 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 				Value: "info",
 			},
 		},
-		Lifecycle: &corev1.Lifecycle {
+		Lifecycle: &corev1.Lifecycle{
 			PreStop: &corev1.Handler{
-				Exec: &corev1.ExecAction {
+				Exec: &corev1.ExecAction{
 					Command: []string{
 						"/bin/sh",
 						"-c",
@@ -280,7 +280,7 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 			Labels:    constants.PolicyServerLabels,
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: &settings.Replicas,
+			Replicas:             &settings.Replicas,
 			RevisionHistoryLimit: pointer.Int32Ptr(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: constants.PolicyServerLabels,
@@ -299,10 +299,10 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 							PreferredDuringSchedulingIgnoredDuringExecution: []corev1.PreferredSchedulingTerm{
 								{
 									Weight: 100,
-									Preference: corev1.NodeSelectorTerm {
+									Preference: corev1.NodeSelectorTerm{
 										MatchExpressions: []corev1.NodeSelectorRequirement{
 											{
-												Key: controlPlaneNodeLabelKey,
+												Key:      controlPlaneNodeLabelKey,
 												Operator: corev1.NodeSelectorOpExists,
 											},
 										},
@@ -310,10 +310,10 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 								},
 								{
 									Weight: 100,
-									Preference: corev1.NodeSelectorTerm {
+									Preference: corev1.NodeSelectorTerm{
 										MatchExpressions: []corev1.NodeSelectorRequirement{
 											{
-												Key: masterNodeLabelKey,
+												Key:      masterNodeLabelKey,
 												Operator: corev1.NodeSelectorOpExists,
 											},
 										},
@@ -325,11 +325,11 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 							PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
 								{
 									Weight: 100,
-									PodAffinityTerm: corev1.PodAffinityTerm {
+									PodAffinityTerm: corev1.PodAffinityTerm{
 										LabelSelector: &metav1.LabelSelector{
 											MatchExpressions: []metav1.LabelSelectorRequirement{
 												{
-													Key: constants.PolicyServerLabelKey,
+													Key:      constants.PolicyServerLabelKey,
 													Operator: metav1.LabelSelectorOpIn,
 													Values: []string{
 														constants.PolicyServerLabelVal,
@@ -343,10 +343,11 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 							},
 						},
 					},
-					EnableServiceLinks: pointer.BoolPtr(false),
-					Containers:         []corev1.Container{admissionContainer},
-					PriorityClassName:  priorityClassName,
-					ServiceAccountName: r.DeploymentsServiceAccountName,
+					EnableServiceLinks:            pointer.BoolPtr(false),
+					Containers:                    []corev1.Container{admissionContainer},
+					PriorityClassName:             priorityClassName,
+					ServiceAccountName:            r.DeploymentsServiceAccountName,
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(10),
 					Tolerations: []corev1.Toleration{
 						{
 							Key:      controlPlaneNodeLabelKey,
