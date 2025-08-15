@@ -188,8 +188,7 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 	)
 
 	resourceList := corev1.ResourceList{
-		corev1.ResourceCPU:    apiresource.MustParse("200m"),
-		corev1.ResourceMemory: apiresource.MustParse("786Mi"),
+		corev1.ResourceMemory: apiresource.MustParse("768Mi"),
 	}
 
 	admissionContainer := corev1.Container{
