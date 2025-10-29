@@ -329,7 +329,7 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 										LabelSelector: &metav1.LabelSelector{
 											MatchExpressions: []metav1.LabelSelectorRequirement{
 												{
-													Key:      constants.PolicyServerLabelKey,
+													Key:      constants.KubewardenLabelKey,
 													Operator: metav1.LabelSelectorOpIn,
 													Values: []string{
 														constants.PolicyServerLabelVal,

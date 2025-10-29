@@ -27,7 +27,8 @@ const (
 )
 
 var (
-	PolicyServerLabels = map[string]string{"app": "kubewarden-policy-server"}
-	PolicyServerLabelKey = "app"
-	PolicyServerLabelVal = "kubewarden-policy-server"
+	KubewardenLabelKey           = "app"
+	KubewardenControllerLabelVal = "kubewarden-controller"
+	PolicyServerLabelVal         = "kubewarden-policy-server"
+	PolicyServerLabels           = map[string]string{KubewardenLabelKey: PolicyServerLabelVal}
 )

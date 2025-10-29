@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
+	pkgconstants "github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
 type Reconciler struct {
@@ -104,6 +105,77 @@ func setTrueConditionType(conditions *[]metav1.Condition, conditionType policies
 			Reason: string(policiesv1alpha2.ReconciliationSucceeded),
 		},
 	)
+}
+
+func (r *Reconciler) webhookObjectSelector(objectSelector *metav1.LabelSelector) *metav1.LabelSelector {
+	kubewardenLabelSelectorRequirement := metav1.LabelSelectorRequirement{
+		Key:      pkgconstants.KubewardenLabelKey,
+		Operator: metav1.LabelSelectorOpNotIn,
+		Values:   []string{pkgconstants.KubewardenControllerLabelVal, pkgconstants.PolicyServerLabelVal},
+	}
+	matchExpressionKeyAndOperator := fmt.Sprintf("key=%s, operator=%s",
+		pkgconstants.KubewardenLabelKey, metav1.LabelSelectorOpNotIn)
+
+	if objectSelector == nil || objectSelector.MatchExpressions == nil || len(objectSelector.MatchExpressions) == 0 {
+		objectSelector = &metav1.LabelSelector{}
+		objectSelector.MatchExpressions = []metav1.LabelSelectorRequirement{
+			kubewardenLabelSelectorRequirement,
+		}
+		r.Log.Info(fmt.Sprintf("Empty matchExpressions append %s, values=[%s, %s]",
+			matchExpressionKeyAndOperator,
+			pkgconstants.KubewardenControllerLabelVal,
+			pkgconstants.PolicyServerLabelVal,
+		))
+		return objectSelector
+	}
+
+	for i := range objectSelector.MatchExpressions {
+		matchExpression := &objectSelector.MatchExpressions[i]
+		if matchExpression.Key == pkgconstants.KubewardenLabelKey && matchExpression.Operator == metav1.LabelSelectorOpNotIn {
+			appendKubewardenControllerLabelVal := true
+			appendPolicyServerLabelVal := true
+			for _, labelVal := range matchExpression.Values {
+				if !appendKubewardenControllerLabelVal && !appendPolicyServerLabelVal {
+					break
+				}
+				switch labelVal {
+				case pkgconstants.KubewardenControllerLabelVal:
+					appendKubewardenControllerLabelVal = false
+				case pkgconstants.PolicyServerLabelVal:
+					appendPolicyServerLabelVal = false
+				}
+			}
+			if appendKubewardenControllerLabelVal {
+				matchExpression.Values = append(matchExpression.Values, pkgconstants.KubewardenControllerLabelVal)
+				r.Log.Info(fmt.Sprintf("Match %s matchExpression append values=[%s]",
+					matchExpressionKeyAndOperator,
+					pkgconstants.KubewardenControllerLabelVal,
+				))
+			}
+			if appendPolicyServerLabelVal {
+				matchExpression.Values = append(matchExpression.Values, pkgconstants.PolicyServerLabelVal)
+				r.Log.Info(fmt.Sprintf("Match %s matchExpression append values=[%s]",
+					matchExpressionKeyAndOperator,
+					pkgconstants.PolicyServerLabelVal,
+				))
+			}
+			r.Log.Info(fmt.Sprintf("MatchExpressions exist %s, values=[%s, %s]",
+				matchExpressionKeyAndOperator,
+				pkgconstants.KubewardenControllerLabelVal,
+				pkgconstants.PolicyServerLabelVal,
+			))
+			return objectSelector
+		}
+	}
+
+	objectSelector.MatchExpressions = append(objectSelector.MatchExpressions, kubewardenLabelSelectorRequirement)
+	r.Log.Info(fmt.Sprintf("Mismatch %s matchExpression append %s, values=[%s, %s]",
+		matchExpressionKeyAndOperator,
+		matchExpressionKeyAndOperator,
+		pkgconstants.KubewardenControllerLabelVal,
+		pkgconstants.PolicyServerLabelVal,
+	))
+	return objectSelector
 }
 
 func (r *Reconciler) Reconcile(

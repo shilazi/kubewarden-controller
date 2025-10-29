@@ -77,7 +77,7 @@ func (r *Reconciler) mutatingWebhookConfiguration(
 				FailurePolicy:           clusterAdmissionPolicy.Spec.FailurePolicy,
 				MatchPolicy:             clusterAdmissionPolicy.Spec.MatchPolicy,
 				NamespaceSelector:       clusterAdmissionPolicy.Spec.NamespaceSelector,
-				ObjectSelector:          clusterAdmissionPolicy.Spec.ObjectSelector,
+				ObjectSelector:          r.webhookObjectSelector(clusterAdmissionPolicy.Spec.ObjectSelector),
 				SideEffects:             sideEffects,
 				TimeoutSeconds:          clusterAdmissionPolicy.Spec.TimeoutSeconds,
 				AdmissionReviewVersions: []string{"v1"},
